@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>无碍理想酒馆</title>
+    <style>
+        :root { --beer-gold: #f4a460; --bg: #fdf5e6; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: sans-serif; }
+        
+        #map-viewport { 
+            width: 100vw; height: 100vh; overflow-y: auto; overflow-x: hidden; 
+            background: var(--bg); -webkit-overflow-scrolling: touch; position: relative;
+        }
+
+        .map-content { 
+            width: 100%; height: 2600px; 
+            /* 关键修改：后缀名改为 .jpg */
+            background: url('asset/map.jpg') no-repeat top center; 
+            background-size: 100% auto; position: relative; will-change: transform;
+        }
+
+        #player-char {
+            position: absolute; width: 120px; height: 120px;
+            /* 保持你截图里的 charactor.png 路径 */
+            background: url('asset/charactor.png') no-repeat center center;
+            background-size: contain; z-index: 500;
+            transform: translate(-50%, -80%); 
+            transition: all 0.8s ease-out; pointer-events: none;
+        }
+
+        /* 关卡点样式 */
+        .hotspot {
+            position: absolute; width: 44px; height: 44px; background: #fff;
+            border: 3px solid #3d2b1f; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; z-index: 100;
+            font-size: 18px;
+        }
+        .hotspot.active { border-color: var(--beer-gold); box-shadow: 0 0 15px var(--beer-gold); animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        .hotspot.locked { opacity: 0.2; }
+
+        /* UI 遮罩层 */
+        #landing-page { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--beer-gold); }
+        .start-btn { margin-top: 20px; padding: 10px 30px; border: 2px solid var(--beer-gold); color: var(--beer-gold); background: none; border-radius: 20px; font-size: 1rem; }
+        #quiz-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 2000; display: none; align-items: center; justify-content: center; }
+        .quiz-card { width: 80%; background: #fff; padding: 25px; border-radius: 15px; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <!-- 封面页 -->
+    <div id="landing-page">
+        <h2 style="letter-spacing:2px;">无碍理想酒馆</h2>
+        <p style="font-size: 0.9rem; opacity: 0.8;">每一个理想都值得被平等对待</p>
+        <button class="start-btn" onclick="document.getElementById('landing-page').style.display='none';updatePos();">开启探索</button>
+    </div>
+
+    <!-- 地图视口 -->
+    <div id="map-viewport">
+        <div class="map-content">
+            <div id="player-char"></div>
+            <!-- 10个关卡点 -->
+            <div id="spot-0" class="hotspot active" style="top: 17%; left: 45%;" onclick="handleSpot(0)">1</div>
+            <div id="spot-1" class="hotspot locked" style="top: 36%; left: 19%;" onclick="handleSpot(1)">2</div>
+            <div id="spot-2" class="hotspot locked" style="top: 30%; left: 70%;" onclick="handleSpot(2)">3</div>
+            <div id="spot-3" class="hotspot locked" style="top: 41%; left: 88%;" onclick="handleSpot(3)">4</div>
+            <div id="spot-4" class="hotspot locked" style="top: 50%; left: 80%;" onclick="handleSpot(4)">5</div>
+            <div id="spot-5" class="hotspot locked" style="top: 54%; left: 52%;" onclick="handleSpot(5)">6</div>
+            <div id="spot-6" class="hotspot locked" style="top: 66%; left: 28%;" onclick="handleSpot(6)">7</div>
+            <div id="spot-7" class="hotspot locked" style="top: 80%; left: 21%;" onclick="handleSpot(7)">8</div>
+            <div id="spot-8" class="hotspot locked" style="top: 75%; left: 58%;" onclick="handleSpot(8)">9</div>
+            <div id="spot-9" class="hotspot locked" style="top: 88%; left: 63%;" onclick="handleSpot(9)">🍻</div>
+        </div>
+    </div>
+
+    <!-- 简易问答层 -->
+    <div id="quiz-overlay">
+        <div class="quiz-card">
+            <h3 style="color:var(--beer-gold)">挑战进行中</h3>
+            <p id="q-text" style="line-height:1.5; color:#333;"></p>
+            <div id="opts"></div>
+        </div>
+    </div>
+
+    <script>
+        const spots = [{t:17, l:45}, {t:36, l:19}, {t:30, l:70}, {t:41, l:88}, {t:50, l:80}, {t:54, l:52}, {t:66, l:28}, {t:80, l:21}, {t:75, l:58}, {t:88, l:63}];
+        let current = 0;
+
+        function updatePos() {
+            const char = document.getElementById('player-char');
+            char.style.top = spots[current].t + '%';
+            char.style.left = spots[current].l + '%';
+            // 自动滚动，将人物置于屏幕中心
+            const scrollY = (spots[current].t / 100) * 2600 - window.innerHeight / 2;
+            document.getElementById('map-viewport').scrollTo({ top: scrollY, behavior: 'smooth' });
+        }
+
+        function handleSpot(idx) {
+            if(idx !== current) return;
+            document.getElementById('q-text').innerText = "你已发现一个无障碍设施点！点击确认进入下一关。";
+            const optBox = document.getElementById('opts');
+            optBox.innerHTML = '<button onclick="nextLvl()" style="width:100%;padding:12px;background:var(--beer-gold);color:white;border:none;border-radius:10px;font-size:1rem;">确认通过</button>';
+            document.getElementById('quiz-overlay').style.display = 'flex';
+        }
+
+        function nextLvl() {
+            document.getElementById('quiz-overlay').style.display = 'none';
+            document.getElementById(`spot-${current}`).style.background = '#f4a460';
+            document.getElementById(`spot-${current}`).style.color = '#fff';
+            current++;
+            if(current < 10) {
+                const next = document.getElementById(`spot-${current}`);
+                next.classList.remove('locked');
+                next.classList.add('active');
+                updatePos();
+            } else {
+                alert("太棒了！你已成功穿越无碍理想地图，点击确定领取奖章。");
+                // 这里可以后续跳转到你的 store.jpg 页面
+            }
+        }
+    </script>
+</body>
+</html>
